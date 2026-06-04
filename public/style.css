@@ -90,12 +90,97 @@ body {
   pointer-events: none;
 }
 
+/* --- NOVA BAR HUD --- */
+.nova-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 55px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-bottom: 1px solid rgba(0, 102, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(11, 19, 43, 0.02);
+  z-index: 1000;
+  transition: var(--transition-smooth);
+}
+
+.nova-logo {
+  font-family: var(--font-hud);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--text-main);
+}
+
+.nova-center-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.telemetry-divider {
+  color: rgba(11, 19, 43, 0.15);
+}
+
+.nova-right-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-main);
+  background: rgba(0, 102, 255, 0.04);
+  padding: 6px 12px;
+  border-radius: 15px;
+  border: 1px solid rgba(0, 102, 255, 0.05);
+}
+
+.weather-widget i {
+  color: var(--accent-blue);
+}
+
+.weather-cond {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.nova-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(11, 19, 43, 0.1);
+  margin: 0 4px;
+}
+
+.nova-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* --- MAIN CONTAINER LAYOUT --- */
 .main-container {
   flex: 1;
   display: grid;
-  grid-template-rows: 280px 1fr 90px;
-  padding: 10px 40px 20px 40px;
+  grid-template-rows: 240px 1fr 90px;
+  padding: 75px 40px 10px 40px; /* Offset for floating top bar */
   max-width: 1300px;
   margin: 0 auto;
   width: 100%;

@@ -1,9 +1,10 @@
 // --- 3D GLOWING PARTICLE ORB STATE (THREE.JS) ---
-let scene, camera, renderer, particleSystem1, particleSystem2;
-const particleCount1 = 400; // Inner Core
-const particleCount2 = 500; // Outer Shell
+let scene, camera, renderer, particleSystem1, particleSystem2, particleSystem3;
+const particleCount1 = 450; // Inner Core
+const particleCount2 = 550; // Outer Shell
+const particleCount3 = 240; // Orbital Ring
 let orbState = 'idle'; // idle, listening, thinking, speaking
-let particleGeometry1, particleGeometry2;
+let particleGeometry1, particleGeometry2, particleGeometry3;
 
 // --- STATE CONFIGURATION ---
 const state = {
@@ -19,7 +20,6 @@ const state = {
 // --- DOM ELEMENTS ---
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
-const hudTime = document.getElementById('hud-time');
 const orbContainer = document.getElementById('orb-trigger');
 const orbSubtext = document.getElementById('orb-subtext');
 const chatLogs = document.getElementById('chat-logs');
@@ -52,7 +52,7 @@ let isSpeaking = false;
 let isRecognitionRunning = false;
 let audioUnlocked = false; // Browser Web Audio permission flag
 
-// Initialize 3D Particle Orb Core (WebGL Three.js) - Featuring Two Concentric Animated Cores
+// Initialize 3D Particle Orb Core (WebGL Three.js) - Featuring Two Concentric Cores & Orbital Ring
 function init3DOrb() {
   const container = document.getElementById('canvas-container');
   if (!container) return;
@@ -76,7 +76,7 @@ function init3DOrb() {
   // Generate dynamic soft glowing circle texture on-the-fly
   const pTexture = createCircleTexture();
 
-  // 1. INNER CORE GEOMETRY & MATERIAL (Dark Blue Base)
+  // 1. INNER CORE GEOMETRY (Dark Blue Base)
   particleGeometry1 = new THREE.BufferGeometry();
   const positions1 = new Float32Array(particleCount1 * 3);
   const colors1 = new Float32Array(particleCount1 * 3);
@@ -111,7 +111,7 @@ function init3DOrb() {
   particleSystem1 = new THREE.Points(particleGeometry1, material1);
   scene.add(particleSystem1);
 
-  // 2. OUTER CORE GEOMETRY & MATERIAL (Light Blue Base)
+  // 2. OUTER CORE GEOMETRY (Light Blue Base)
   particleGeometry2 = new THREE.BufferGeometry();
   const positions2 = new Float32Array(particleCount2 * 3);
   const colors2 = new Float32Array(particleCount2 * 3);
@@ -146,6 +146,33 @@ function init3DOrb() {
   particleSystem2 = new THREE.Points(particleGeometry2, material2);
   scene.add(particleSystem2);
 
+  // 3. ORBITAL RING GEOMETRY (Tilted Orbiting Ring)
+  particleGeometry3 = new THREE.BufferGeometry();
+  const positions3 = new Float32Array(particleCount3 * 3);
+  const colors3 = new Float32Array(particleCount3 * 3);
+  const color3 = new THREE.Color('#00d2ff');
+
+  for (let i = 0; i < particleCount3; i++) {
+    const angle = (i / particleCount3) * Math.PI * 2;
+    const r = 1.16 + Math.random() * 0.08; // Orbit radius
+
+    positions3[i * 3] = r * Math.cos(angle);
+    positions3[i * 3 + 1] = (Math.random() - 0.5) * 0.05; // thin vertical spread
+    positions3[i * 3 + 2] = r * Math.sin(angle);
+
+    colors3[i * 3] = color3.r;
+    colors3[i * 3 + 1] = color3.g;
+    colors3[i * 3 + 2] = color3.b;
+  }
+  particleGeometry3.setAttribute('position', new THREE.BufferAttribute(positions3, 3));
+  particleGeometry3.setAttribute('color', new THREE.BufferAttribute(colors3, 3));
+
+  particleSystem3 = new THREE.Points(particleGeometry3, material2);
+  // Add static Z and X tilt to make it orbit diagonally
+  particleSystem3.rotation.x = Math.PI / 3.5;
+  particleSystem3.rotation.z = Math.PI / 6;
+  scene.add(particleSystem3);
+
   animateOrb();
 }
 
@@ -169,33 +196,37 @@ function createCircleTexture() {
   return texture;
 }
 
-// Core animation tick for double concentric 3D sphere state morphing
+// Core animation tick for double concentric 3D sphere & ring state morphing
 let clock = new THREE.Clock();
 
 function animateOrb() {
   requestAnimationFrame(animateOrb);
 
-  if (!particleSystem1 || !particleSystem2) return;
+  if (!particleSystem1 || !particleSystem2 || !particleSystem3) return;
 
   const time = clock.getElapsedTime();
 
   if (orbState === 'idle') {
-    // Concentric spheres rotate in opposite directions
+    // Concentric spheres rotate in opposite directions, ring rotates tilt-wise
     particleSystem1.rotation.y = time * 0.16;
     particleSystem1.rotation.x = time * 0.06;
     
     particleSystem2.rotation.y = -time * 0.12;
     particleSystem2.rotation.x = -time * 0.04;
+    
+    particleSystem3.rotation.y = time * 0.45;
 
     // Out-of-phase breathing pulses
     const pulse1 = 1.0 + Math.sin(time * 1.5) * 0.03;
     const pulse2 = 1.0 + Math.cos(time * 1.5) * 0.04;
     particleSystem1.scale.set(pulse1, pulse1, pulse1);
     particleSystem2.scale.set(pulse2, pulse2, pulse2);
+    particleSystem3.scale.set(pulse2, pulse2, pulse2);
 
-    // Set colors: Inner is deep dark blue, outer is bright light blue
+    // Set colors: Inner is deep dark blue, outer/ring is bright light blue
     setParticleColor(particleGeometry1, '#0b132b', particleCount1);
     setParticleColor(particleGeometry2, '#00d2ff', particleCount2);
+    setParticleColor(particleGeometry3, '#00d2ff', particleCount3);
 
   } else if (orbState === 'listening') {
     // Dynamic rapid rotation
@@ -204,15 +235,19 @@ function animateOrb() {
     
     particleSystem2.rotation.y = -time * 0.6;
     particleSystem2.rotation.z = time * 0.3;
+    
+    particleSystem3.rotation.y = -time * 1.1;
 
     const pulse1 = 1.08 + Math.sin(time * 9.5) * 0.08;
     const pulse2 = 1.12 + Math.cos(time * 9.5) * 0.1;
     particleSystem1.scale.set(pulse1, pulse1, pulse1);
     particleSystem2.scale.set(pulse2, pulse2, pulse2);
+    particleSystem3.scale.set(pulse2, pulse2, pulse2);
 
     // Transition to energetic active state colors (Magenta/Pink cores)
     setParticleColor(particleGeometry1, '#ff007c', particleCount1);
     setParticleColor(particleGeometry2, '#ff66b2', particleCount2);
+    setParticleColor(particleGeometry3, '#ff66b2', particleCount3);
 
   } else if (orbState === 'thinking') {
     // Spiral swirl vortex rotation
@@ -221,15 +256,19 @@ function animateOrb() {
     
     particleSystem2.rotation.y = -time * 1.5;
     particleSystem2.rotation.x = -time * 0.5;
+    
+    particleSystem3.rotation.y = time * 2.2;
 
     const pulse1 = 0.96 + Math.sin(time * 18) * 0.04;
     const pulse2 = 0.98 + Math.cos(time * 18) * 0.06;
     particleSystem1.scale.set(pulse1, pulse1, pulse1);
     particleSystem2.scale.set(pulse2, pulse2, pulse2);
+    particleSystem3.scale.set(pulse2, pulse2, pulse2);
 
     // Swirling purple color profiles
     setParticleColor(particleGeometry1, '#7a00cc', particleCount1);
     setParticleColor(particleGeometry2, '#bd00ff', particleCount2);
+    setParticleColor(particleGeometry3, '#bd00ff', particleCount3);
 
   } else if (orbState === 'speaking') {
     // Outward throb matching speech peak simulation
@@ -238,15 +277,19 @@ function animateOrb() {
     
     particleSystem2.rotation.y = -time * 0.25;
     particleSystem2.rotation.x = -time * 0.1;
+    
+    particleSystem3.rotation.y = -time * 0.75;
 
     const throb1 = 1.02 + Math.sin(time * 6.5) * 0.06 * (1.0 + Math.cos(time * 3.5));
     const throb2 = 1.06 + Math.cos(time * 6.5) * 0.08 * (1.0 + Math.sin(time * 3.5));
     particleSystem1.scale.set(throb1, throb1, throb1);
     particleSystem2.scale.set(throb2, throb2, throb2);
+    particleSystem3.scale.set(throb2, throb2, throb2);
 
     // Dual blue voice frequency waves
     setParticleColor(particleGeometry1, '#0011aa', particleCount1);
     setParticleColor(particleGeometry2, '#0088ff', particleCount2);
+    setParticleColor(particleGeometry3, '#0088ff', particleCount3);
   }
 
   renderer.render(scene, camera);
@@ -769,8 +812,83 @@ function setupUIEvents() {
 
   setInterval(() => {
     const d = new Date();
-    hudTime.innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeEl = document.getElementById('nova-time');
+    const dateEl = document.getElementById('nova-date');
+    if (timeEl) {
+      timeEl.innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    if (dateEl) {
+      dateEl.innerText = d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
   }, 1000);
+
+  // Weather Telemetry Service
+  const updateWeather = async () => {
+    const tempEl = document.getElementById('weather-temp');
+    const condEl = document.getElementById('weather-cond');
+    const iconEl = document.getElementById('weather-icon');
+    const triggerEl = document.getElementById('weather-trigger');
+    if (!tempEl || !condEl || !iconEl) return;
+
+    try {
+      const locRes = await fetch('https://ipapi.co/json/').then(r => r.json());
+      if (locRes && locRes.latitude && locRes.longitude) {
+        const lat = locRes.latitude;
+        const lon = locRes.longitude;
+        const city = locRes.city || 'Local';
+        
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`).then(r => r.json());
+        if (weatherRes && weatherRes.current_weather) {
+          const tempC = weatherRes.current_weather.temperature;
+          const tempF = Math.round((tempC * 9/5) + 32);
+          const code = weatherRes.current_weather.weathercode;
+          
+          let condText = 'Sunny';
+          let iconClass = 'fa-solid fa-sun';
+          
+          if (code === 0) { condText = 'Clear'; iconClass = 'fa-solid fa-sun'; }
+          else if (code >= 1 && code <= 3) { condText = 'Partly Cloudy'; iconClass = 'fa-solid fa-cloud-sun'; }
+          else if (code >= 45 && code <= 48) { condText = 'Foggy'; iconClass = 'fa-solid fa-smog'; }
+          else if (code >= 51 && code <= 67) { condText = 'Rainy'; iconClass = 'fa-solid fa-cloud-showers-heavy'; }
+          else if (code >= 71 && code <= 77) { condText = 'Snowy'; iconClass = 'fa-solid fa-snowflake'; }
+          else if (code >= 80 && code <= 82) { condText = 'Rain Showers'; iconClass = 'fa-solid fa-cloud-rain'; }
+          else if (code >= 95 && code <= 99) { condText = 'Thunderstorm'; iconClass = 'fa-solid fa-cloud-bolt'; }
+
+          tempEl.innerText = `${tempF}°F`;
+          condEl.innerText = condText;
+          iconEl.className = iconClass;
+          if (triggerEl) {
+            triggerEl.title = `Telemetry: ${city} (${lat.toFixed(2)}, ${lon.toFixed(2)}) - Click to Refresh`;
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[Jarvis Weather] Real weather query failed, falling back to simulated telemetry:', e);
+    }
+
+    // Fallback/Simulated Weather Telemetry
+    const simulatedTemp = 68 + Math.round(Math.sin(Date.now() / 600000) * 4);
+    tempEl.innerText = `${simulatedTemp}°F`;
+    condEl.innerText = 'Optimal';
+    iconEl.className = 'fa-solid fa-cloud-sun';
+    if (triggerEl) {
+      triggerEl.title = 'Jarvis Local Telemetry (Simulated) - Click to Refresh';
+    }
+  };
+
+  // Run weather update immediately and set 10-minute interval
+  updateWeather();
+  setInterval(updateWeather, 600000);
+
+  // Weather Click to Manual Refresh
+  const triggerEl = document.getElementById('weather-trigger');
+  if (triggerEl) {
+    triggerEl.addEventListener('click', () => {
+      addChatMessage('System', 'Refreshing weather and system telemetry...', 'system');
+      updateWeather();
+    });
+  }
 }
 
 window.executeHint = function(command) {
