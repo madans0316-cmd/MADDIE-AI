@@ -159,7 +159,12 @@ app.post('/api/command', async (req, res) => {
 
   try {
     // 0. EXPLICIT SHUTDOWN COMMAND
-    if (cleanCmd === 'jarvis, shut down.' || cleanCmd === 'jarvis, shut down') {
+    if (
+      cleanCmd === 'jarvis, shut down.' || 
+      cleanCmd === 'jarvis, shut down' || 
+      cleanCmd === 'shut down.' || 
+      cleanCmd === 'shut down'
+    ) {
       console.log('[Jarvis Backend] SHUTDOWN SIGNALLING RECEIVED. Ceasing operations...');
       setTimeout(() => {
         process.exit(0);

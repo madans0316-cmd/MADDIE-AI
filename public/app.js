@@ -293,7 +293,9 @@ function initRecognition() {
         if (cmd) {
           handleUserCommand(cmd);
         }
-        deactivateVoiceHUD();
+        // In conversational mode, we stay active and do not deactivate the voice HUD immediately.
+        // Jarvis will continue listening and responding in a loop until the user says "Shut down"
+        // or goes silent for the inactivity timeout.
       }
     }
   };
@@ -395,8 +397,13 @@ async function handleUserCommand(command) {
 
   const cleanCmd = command.trim().toLowerCase();
   
-  // Strict shutdown gate: matches "jarvis, shut down." or "jarvis, shut down"
-  if (cleanCmd === 'jarvis, shut down.' || cleanCmd === 'jarvis, shut down') {
+  // Strict shutdown gate: matches "jarvis, shut down", "jarvis, shut down.", "shut down", "shut down."
+  if (
+    cleanCmd === 'jarvis, shut down.' || 
+    cleanCmd === 'jarvis, shut down' || 
+    cleanCmd === 'shut down.' || 
+    cleanCmd === 'shut down'
+  ) {
     addChatMessage('You', command, 'user');
     addChatMessage('System CLI', 'SYSTEM SHUTDOWN INITIATED. CEASING OPERATIONS.', 'system');
     
@@ -422,6 +429,16 @@ async function handleUserCommand(command) {
     });
     return;
   }
+
+  // Refresh conversational inactivity deactivation timer (15 seconds of silence)
+  if (window.activationTimeout) clearTimeout(window.activationTimeout);
+  window.activationTimeout = setTimeout(() => {
+    if (state.isActivated) {
+      addChatMessage('System', 'Deactivating active session due to inactivity. Returning to standby.', 'system');
+      speak("Standby.");
+      deactivateVoiceHUD();
+    }
+  }, 15000);
 
   addChatMessage('You', command, 'user');
   commandInput.value = '';
