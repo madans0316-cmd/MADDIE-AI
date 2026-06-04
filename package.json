@@ -1,7 +1,7 @@
 {
-  "name": "maddy-jarvis-assistant",
+  "name": "jarvis-assistant",
   "version": "1.0.0",
-  "description": "Local server and interface for the Maddy Jarvis-like Voice AI Assistant",
+  "description": "Local server and interface for the Jarvis Voice AI Assistant",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

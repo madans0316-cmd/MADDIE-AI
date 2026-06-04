@@ -28,9 +28,9 @@ if (fs.existsSync(envPath)) {
         }
       }
     });
-    console.log('[Maddy Backend] Environment variables successfully loaded from .env');
+    console.log('[Jarvis Backend] Environment variables successfully loaded from .env');
   } catch (e) {
-    console.error('[Maddy Backend] Error parsing .env file:', e);
+    console.error('[Jarvis Backend] Error parsing .env file:', e);
   }
 }
 
@@ -40,7 +40,7 @@ function queryGeminiSecurely(query, apiKey) {
     const payload = JSON.stringify({
       contents: [{
         parts: [{
-          text: `You are Maddy, a premium, hyper-intelligent Jarvis-like voice assistant. Provide a brief, concise, and helpful spoken-style answer (maximum 2-3 sentences) suitable for text-to-speech reading for this query: "${query}"`
+          text: `You are Jarvis, a premium, hyper-intelligent systems controller and voice assistant. Provide a brief, concise, and helpful spoken-style answer (maximum 2-3 sentences) suitable for text-to-speech reading for this query: "${query}"`
         }]
       }]
     });
@@ -65,7 +65,7 @@ function queryGeminiSecurely(query, apiKey) {
           if (parsed.candidates && parsed.candidates[0].content.parts[0].text) {
             resolve(parsed.candidates[0].content.parts[0].text);
           } else {
-            console.error('[Maddy Backend] Invalid Gemini response:', data);
+            console.error('[Jarvis Backend] Invalid response:', data);
             reject(new Error('Invalid response structure from Gemini API'));
           }
         } catch (e) {
@@ -155,7 +155,7 @@ app.post('/api/command', async (req, res) => {
   }
 
   const cleanCmd = command.toLowerCase().trim();
-  console.log(`[Maddy Backend] Received command: "${cleanCmd}"`);
+  console.log(`[Jarvis Backend] Received command: "${cleanCmd}"`);
 
   try {
     // 0. EXPLICIT SHUTDOWN COMMAND
@@ -287,7 +287,7 @@ app.post('/api/chat', async (req, res) => {
     const answer = await queryGeminiSecurely(query, apiKey);
     res.json({ success: true, response: answer });
   } catch (err) {
-    console.error('[Maddy Backend] Gemini Query Failed:', err);
+    console.error('[Jarvis Backend] Gemini Query Failed:', err);
     res.status(500).json({ 
       error: `Failed to query intelligence core: ${err.message || 'Unknown API error'}` 
     });
@@ -301,7 +301,7 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`==================================================`);
-  console.log(`   MADDY JARVIS AI ASSISTANT RUNNING ON PORT ${PORT}`);
+  console.log(`   JARVIS AI ASSISTANT RUNNING ON PORT ${PORT}`);
   console.log(`   URL: http://localhost:${PORT}`);
   console.log(`==================================================`);
 });

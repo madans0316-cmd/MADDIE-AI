@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Maddy - Jarvis OS Interface</title>
+  <title>Jarvis OS Interface</title>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,10 +40,22 @@
         <span class="weather-cond" id="weather-cond">Sunny</span>
       </div>
       <div class="nova-divider"></div>
+      <button class="dock-toggle-btn" id="dock-toggle-btn" title="Toggle Desktop Dock Mode">
+        <i class="fa-solid fa-compress" id="dock-toggle-icon"></i>
+      </button>
+      <div class="nova-divider"></div>
       <div class="nova-status">
         <span class="status-dot pulsed" id="status-dot"></span>
         <span class="status-text" id="status-text">INITIALIZING...</span>
       </div>
+    </div>
+  </div>
+
+  <!-- Floating Desktop Dock Response Bubble (Only visible in Dock Mode) -->
+  <div class="dock-reply-container hidden" id="dock-reply-container">
+    <div class="dock-reply-bubble">
+      <div class="dock-reply-header">// JARVIS INTEL RESPONSE</div>
+      <div class="dock-reply-text" id="dock-reply-text">Standby. Say "Jarvis" to wake.</div>
     </div>
   </div>
 

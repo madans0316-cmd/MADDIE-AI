@@ -11,9 +11,9 @@ const state = {
   isActivated: false,          // True if Jarvis is woke and listening for command
   continuousListening: true,   // Looping speech recognition active
   speakReplies: true,          // Speak replies back
-  geminiKey: localStorage.getItem('maddy_gemini_key') || '',
-  selectedVoiceName: localStorage.getItem('maddy_voice_name') || '',
-  speechRate: parseFloat(localStorage.getItem('maddy_speech_rate')) || 1.0,
+  geminiKey: localStorage.getItem('jarvis_gemini_key') || '',
+  selectedVoiceName: localStorage.getItem('jarvis_voice_name') || '',
+  speechRate: parseFloat(localStorage.getItem('jarvis_speech_rate')) || 1.0,
   voices: []
 };
 
@@ -377,7 +377,7 @@ function initRecognition() {
       const lower = text.toLowerCase();
       console.log(`[Jarvis WakeWord] Capturing: "${lower}"`);
 
-      // Match vocal variations/transcripts of Jarvis or Maddy
+      // Match vocal variations/transcripts of Jarvis
       if (
         lower.includes('jarvis') ||
         lower.includes('hey jarvis') ||
@@ -385,10 +385,7 @@ function initRecognition() {
         lower.includes('charvis') ||
         lower.includes('job is') ||
         lower.includes('service') ||
-        lower.includes('wake up') ||
-        lower.includes('maddy') ||
-        lower.includes('hey maddy') ||
-        lower.includes('madam')
+        lower.includes('wake up')
       ) {
         triggerActivation();
       }
@@ -399,7 +396,7 @@ function initRecognition() {
       if (finalTranscript) {
         let cmd = finalTranscript.trim();
         // Strip wake trigger keywords
-        cmd = cmd.replace(/^(hey\s+)?(jarvis|travis|charvis|maddy)\s*,?\s*/i, '');
+        cmd = cmd.replace(/^(hey\s+)?(jarvis|travis|charvis)\s*,?\s*/i, '');
         cmd = cmd.replace(/wake\s*up/i, '').trim();
 
         if (cmd) {
@@ -453,7 +450,7 @@ function triggerActivation() {
   beepOn.volume = 0.3;
   beepOn.play().catch(() => {});
 
-  speak("Yes, I am awake. What is your command?", () => {
+  speak("Comrade, wake up.", () => {
     voiceTranscript.innerText = "Speak command...";
     updateStatus('LISTENING COMMAND...', 'listening');
     startListeningLoop();
@@ -509,12 +506,10 @@ async function handleUserCommand(command) {
 
   const cleanCmd = command.trim().toLowerCase();
   
-  // Strict shutdown gate: matches "jarvis, shut down", "jarvis, shut down.", "shut down", "shut down."
+  // Strict shutdown gate: matches "jarvis, shut down" and "jarvis, shut down."
   if (
     cleanCmd === 'jarvis, shut down.' || 
-    cleanCmd === 'jarvis, shut down' || 
-    cleanCmd === 'shut down.' || 
-    cleanCmd === 'shut down'
+    cleanCmd === 'jarvis, shut down'
   ) {
     addChatMessage('You', command, 'user');
     addChatMessage('System CLI', 'SYSTEM SHUTDOWN INITIATED. CEASING OPERATIONS.', 'system');
@@ -538,6 +533,20 @@ async function handleUserCommand(command) {
       document.body.style.opacity = '0.3';
       document.body.style.pointerEvents = 'none';
       orbSubtext.innerText = "OFFLINE - RESTART LOCAL SERVER TO BOOT";
+    });
+    return;
+  }
+
+  // Voice standby shutdown: matches "shut down" and "shut down."
+  if (
+    cleanCmd === 'shut down.' || 
+    cleanCmd === 'shut down'
+  ) {
+    addChatMessage('You', command, 'user');
+    addChatMessage('System', 'Standby shutdown initiated. Jarvis is now inactive.', 'system');
+    
+    speak("Shutdown sequence initiated. Going offline.", () => {
+      deactivateVoiceHUD();
     });
     return;
   }
@@ -718,6 +727,18 @@ function addChatMessage(sender, text, type) {
 
   chatLogs.appendChild(msg);
   chatLogs.scrollTop = chatLogs.scrollHeight;
+
+  // Sync to Dock Mode response bubble if sender is Jarvis or System
+  if (type === 'ai' || type === 'system') {
+    const dockTextEl = document.getElementById('dock-reply-text');
+    const dockContainerEl = document.getElementById('dock-reply-container');
+    if (dockTextEl && dockContainerEl) {
+      dockTextEl.innerText = text;
+      if (document.body.classList.contains('dock-mode')) {
+        dockContainerEl.classList.remove('hidden');
+      }
+    }
+  }
 }
 
 // Available speech synthesis voice list
@@ -749,6 +770,41 @@ function updateContinuousButtonUI() {
 
 // Event bindings
 function setupUIEvents() {
+  const dockToggleBtn = document.getElementById('dock-toggle-btn');
+  const dockToggleIcon = document.getElementById('dock-toggle-icon');
+  const dockReplyContainer = document.getElementById('dock-reply-container');
+
+  // Load persistent Dock Mode
+  const isDock = localStorage.getItem('jarvis_dock_mode') === 'true';
+  if (isDock) {
+    document.body.classList.add('dock-mode');
+    if (dockToggleIcon) {
+      dockToggleIcon.className = 'fa-solid fa-expand';
+    }
+    if (dockReplyContainer) {
+      dockReplyContainer.classList.remove('hidden');
+    }
+  }
+
+  if (dockToggleBtn) {
+    dockToggleBtn.addEventListener('click', () => {
+      const active = document.body.classList.toggle('dock-mode');
+      localStorage.setItem('jarvis_dock_mode', active);
+      
+      if (dockToggleIcon) {
+        dockToggleIcon.className = active ? 'fa-solid fa-expand' : 'fa-solid fa-compress';
+      }
+      
+      if (dockReplyContainer) {
+        if (active) {
+          dockReplyContainer.classList.remove('hidden');
+        } else {
+          dockReplyContainer.classList.add('hidden');
+        }
+      }
+    });
+  }
+
   sendTrigger.addEventListener('click', () => {
     const val = commandInput.value.trim();
     if (val) handleUserCommand(val);
@@ -775,10 +831,10 @@ function setupUIEvents() {
     state.speechRate = parseFloat(voiceRateSlider.value);
     state.speakReplies = voiceFeedbackCheckbox.checked;
 
-    localStorage.setItem('maddy_gemini_key', state.geminiKey);
-    localStorage.setItem('maddy_voice_name', state.selectedVoiceName);
-    localStorage.setItem('maddy_speech_rate', state.speechRate);
-    localStorage.setItem('maddy_speak_replies', state.speakReplies);
+    localStorage.setItem('jarvis_gemini_key', state.geminiKey);
+    localStorage.setItem('jarvis_voice_name', state.selectedVoiceName);
+    localStorage.setItem('jarvis_speech_rate', state.speechRate);
+    localStorage.setItem('jarvis_speak_replies', state.speakReplies);
 
     settingsPanel.classList.add('hidden');
     addChatMessage('System', 'Settings updated. Brain core recalibrated.', 'system');
@@ -898,7 +954,7 @@ window.executeHint = function(command) {
 // --- INITIALIZE ON CONTENT LOAD ---
 window.addEventListener('DOMContentLoaded', () => {
   geminiKeyInput.value = state.geminiKey;
-  voiceFeedbackCheckbox.checked = localStorage.getItem('maddy_speak_replies') !== 'false';
+  voiceFeedbackCheckbox.checked = localStorage.getItem('jarvis_speak_replies') !== 'false';
   voiceRateSlider.value = state.speechRate;
   rateValue.innerText = state.speechRate + 'x';
 

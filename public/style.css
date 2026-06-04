@@ -725,3 +725,169 @@ body {
   backdrop-filter: blur(16px);
   background: rgba(13, 8, 24, 0.45);
 }
+
+/* --- DOCK MODE BUTTON STYLING --- */
+.dock-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition-fast);
+  padding: 4px;
+}
+.dock-toggle-btn:hover {
+  color: var(--accent-blue);
+  transform: scale(1.1);
+}
+
+/* --- DOCK MODE CORE OVERRIDES --- */
+body.dock-mode {
+  background-color: transparent !important;
+}
+
+body.dock-mode .cyber-bg {
+  background: transparent !important;
+}
+
+body.dock-mode .grid-overlay,
+body.dock-mode .glow-radial-1,
+body.dock-mode .glow-radial-2 {
+  display: none !important;
+}
+
+/* Float the Nova Bar in the center top as the header of the dock */
+body.dock-mode .nova-bar {
+  max-width: 700px;
+  width: calc(100% - 30px);
+  left: 50%;
+  transform: translateX(-50%);
+  top: 15px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 102, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(11, 19, 43, 0.15);
+  padding: 0 25px;
+  height: 50px;
+}
+
+/* Shift main container to represent the dock workspace */
+body.dock-mode .main-container {
+  height: 120px;
+  max-width: 700px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  margin: 0 auto;
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-radius: 24px;
+  border: 1px solid rgba(0, 102, 255, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  gap: 15px;
+}
+
+/* Core section sizing in Dock Mode */
+body.dock-mode .orb-section {
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  justify-content: center;
+  align-items: center;
+}
+
+body.dock-mode .orb-container,
+body.dock-mode .orb-canvas-container {
+  width: 90px;
+  height: 90px;
+}
+
+body.dock-mode .orb-canvas-container canvas {
+  width: 90px !important;
+  height: 90px !important;
+}
+
+body.dock-mode .orb-canvas-container::before {
+  width: 50px;
+  height: 50px;
+  filter: blur(8px);
+}
+
+body.dock-mode .orb-subtext {
+  display: none !important;
+}
+
+/* Hide the large chat terminal display in Dock Mode */
+body.dock-mode .display-section {
+  display: none !important;
+}
+
+/* Input command area alignment in Dock Mode */
+body.dock-mode .input-section {
+  flex: 1;
+  width: auto;
+}
+
+body.dock-mode .search-container {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0, 102, 255, 0.1);
+  box-shadow: none;
+}
+
+/* Floating response bubble styling below the dock bar */
+.dock-reply-container {
+  position: fixed;
+  top: 210px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  z-index: 999;
+  animation: replySlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes replySlideIn {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.dock-reply-bubble {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 102, 255, 0.2);
+  border-radius: 16px;
+  padding: 12px 20px;
+  box-shadow: 0 10px 30px rgba(11, 19, 43, 0.1);
+}
+
+.dock-reply-header {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  color: var(--accent-blue);
+  margin-bottom: 5px;
+}
+
+.dock-reply-text {
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* Adjust layout positions of elements inside Settings panel in Dock Mode */
+body.dock-mode .settings-toggle-btn {
+  top: auto;
+  bottom: 20px;
+  right: 20px;
+}
+
