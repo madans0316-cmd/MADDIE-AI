@@ -190,6 +190,12 @@ app.post('/api/command', async (req, res) => {
         return res.json({ success: true, message: `Opening ${target} on your laptop.` });
       }
 
+      // Secure general fallback to launch any application in Windows Path securely
+      if (/^[a-zA-Z0-9\s-_]+$/.test(rawTarget)) {
+        await runLocalCommand(`start "" "${rawTarget}"`);
+        return res.json({ success: true, message: `Opening ${rawTarget} on your laptop.` });
+      }
+
       return res.status(400).json({ 
         error: `I don't have permission to open "${rawTarget}" directly. I can open websites or apps like Notepad, Paint, and Calculator.` 
       });
@@ -210,6 +216,13 @@ app.post('/api/command', async (req, res) => {
       if (target === 'chrome' || target === 'browser') {
         await runLocalCommand(`taskkill /IM chrome.exe /F`);
         return res.json({ success: true, message: 'Closed Chrome browser.' });
+      }
+
+      // Secure general taskkill fallback
+      if (/^[a-zA-Z0-9\s-_]+$/.test(rawTarget)) {
+        const procName = rawTarget.endsWith('.exe') ? rawTarget : `${rawTarget}.exe`;
+        await runLocalCommand(`taskkill /IM ${procName} /F`);
+        return res.json({ success: true, message: `Closed ${rawTarget}.` });
       }
 
       return res.status(400).json({ 

@@ -1,7 +1,13 @@
+// --- 3D GLOWING PARTICLE ORB STATE (THREE.JS) ---
+let scene, camera, renderer, particleSystem;
+const particleCount = 800;
+let orbState = 'idle'; // idle, listening, thinking, speaking
+let particleGeometry;
+
 // --- STATE CONFIGURATION ---
 const state = {
-  isActivated: false,          // True if Maddy has been woken up and is waiting for a command
-  continuousListening: true,   // Looping Speech recognition
+  isActivated: false,          // True if Jarvis is woke and listening for command
+  continuousListening: true,   // Looping speech recognition active
   speakReplies: true,          // Speak replies back
   geminiKey: localStorage.getItem('maddy_gemini_key') || '',
   selectedVoiceName: localStorage.getItem('maddy_voice_name') || '',
@@ -16,10 +22,8 @@ const hudTime = document.getElementById('hud-time');
 const orbContainer = document.getElementById('orb-trigger');
 const orbSubtext = document.getElementById('orb-subtext');
 const chatLogs = document.getElementById('chat-logs');
-const chatContainer = document.getElementById('chat-container');
 const commandInput = document.getElementById('command-input');
 const micTrigger = document.getElementById('mic-trigger');
-const micIcon = document.getElementById('mic-icon');
 const sendTrigger = document.getElementById('send-trigger');
 const continuousIndicator = document.getElementById('continuous-indicator');
 const voiceLockBtn = document.getElementById('voice-lock-btn');
@@ -40,12 +44,161 @@ const saveSettingsBtn = document.getElementById('save-settings');
 const beepOn = document.getElementById('beep-on');
 const beepOff = document.getElementById('beep-off');
 
-// --- SPEECH ENGINES VARIABLES ---
+// --- SPEECH ENGINES SETUP ---
 let recognition = null;
 let synthesis = window.speechSynthesis;
 let isSpeaking = false;
 let isRecognitionRunning = false;
-let audioUnlocked = false; // Browser audio security unlock flag
+let audioUnlocked = false; // Browser Web Audio permission flag
+
+// Initialize 3D Particle Orb Core (WebGL Three.js)
+function init3DOrb() {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  const width = 280;
+  const height = 280;
+
+  // Scene
+  scene = new THREE.Scene();
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+  camera.position.z = 2.4;
+
+  // WebGL Renderer
+  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  // Buffer Geometry for high-performance particle math
+  particleGeometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+
+  const initialColor = new THREE.Color('#00f0ff'); // Start with cyan
+
+  for (let i = 0; i < particleCount; i++) {
+    // Generate uniform spherical shell coordinates
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = 0.72 + Math.random() * 0.14; // soft layer thickness
+
+    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = r * Math.cos(phi);
+
+    colors[i * 3] = initialColor.r;
+    colors[i * 3 + 1] = initialColor.g;
+    colors[i * 3 + 2] = initialColor.b;
+  }
+
+  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  // Generate dynamic soft glowing circle texture on-the-fly
+  const pTexture = createCircleTexture();
+
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 0.05,
+    map: pTexture,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    vertexColors: true
+  });
+
+  particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+  scene.add(particleSystem);
+
+  animateOrb();
+}
+
+// Helper to create a glowing canvas texture for points
+function createCircleTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  
+  const gradient = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.7)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 16, 16);
+  
+  const texture = new THREE.Texture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// Core animation tick for 3D sphere state morphing
+let clock = new THREE.Clock();
+
+function animateOrb() {
+  requestAnimationFrame(animateOrb);
+
+  if (!particleSystem) return;
+
+  const time = clock.getElapsedTime();
+
+  if (orbState === 'idle') {
+    // Soft floating rotation
+    particleSystem.rotation.y = time * 0.16;
+    particleSystem.rotation.x = time * 0.06;
+    const pulse = 1.0 + Math.sin(time * 1.5) * 0.04;
+    particleSystem.scale.set(pulse, pulse, pulse);
+    setParticleColor('#00f0ff'); // Cyan
+
+  } else if (orbState === 'listening') {
+    // Breathing energetic expansion, fast rotation
+    particleSystem.rotation.y = time * 0.7;
+    particleSystem.rotation.x = time * 0.3;
+    const pulse = 1.1 + Math.sin(time * 9) * 0.12;
+    particleSystem.scale.set(pulse, pulse, pulse);
+    setParticleColor('#ff007c'); // Hot pink
+
+  } else if (orbState === 'thinking') {
+    // Rapid spiral swirl
+    particleSystem.rotation.y = time * 1.8;
+    particleSystem.rotation.z = time * 0.6;
+    const pulse = 0.96 + Math.sin(time * 18) * 0.05;
+    particleSystem.scale.set(pulse, pulse, pulse);
+    setParticleColor('#bd00ff'); // Purple
+
+  } else if (orbState === 'speaking') {
+    // Bouncing throb matching wave form
+    particleSystem.rotation.y = time * 0.28;
+    particleSystem.rotation.x = time * 0.12;
+    const throb = 1.05 + Math.sin(time * 6.5) * 0.09 * (1.0 + Math.cos(time * 3.5));
+    particleSystem.scale.set(throb, throb, throb);
+    setParticleColor('#0066ff'); // Royal blue
+  }
+
+  renderer.render(scene, camera);
+}
+
+// Smooth linear color lerp for point arrays
+function setParticleColor(hexColor) {
+  const colors = particleGeometry.attributes.color.array;
+  const target = new THREE.Color(hexColor);
+  
+  for (let i = 0; i < particleCount; i++) {
+    colors[i * 3] += (target.r - colors[i * 3]) * 0.08;
+    colors[i * 3 + 1] += (target.g - colors[i * 3 + 1]) * 0.08;
+    colors[i * 3 + 2] += (target.b - colors[i * 3 + 2]) * 0.08;
+  }
+  particleGeometry.attributes.color.needsUpdate = true;
+}
+
+function updateOrbState(state) {
+  orbState = state;
+}
 
 // Initialize Speech Recognition
 function initRecognition() {
@@ -57,31 +210,27 @@ function initRecognition() {
   }
 
   if (recognition) {
-    try {
-      recognition.abort();
-    } catch (e) {}
+    try { recognition.abort(); } catch (e) {}
   }
 
   recognition = new SpeechRecognition();
-  // Using Looping Single-Shot recognition is 10x more reliable in browsers than continuous mode.
-  // It resets the acoustic buffer on pause, preventing speech accumulation and leaks.
   recognition.continuous = false;
   recognition.interimResults = true;
   recognition.lang = 'en-US';
 
   recognition.onstart = () => {
     isRecognitionRunning = true;
-    console.log('[Maddy Speech] Recognition started. Mode: ' + (state.isActivated ? 'COMMAND' : 'WAKEWORD'));
+    console.log('[Jarvis Speech] Listening. Active state: ' + state.isActivated);
     if (state.isActivated) {
       updateStatus('LISTENING COMMAND...', 'listening');
     } else {
-      updateStatus('MADDY WATCHING (SAY "MADDY")', 'online');
+      updateStatus('JARVIS STANDBY (SAY "JARVIS")', 'online');
     }
   };
 
-  recognition.onerror = (event) => {
-    console.warn('[Maddy Speech] Recognition event error:', event.error);
-    if (event.error === 'not-allowed') {
+  recognition.onerror = (e) => {
+    console.warn('[Jarvis Speech] Error Event:', e.error);
+    if (e.error === 'not-allowed') {
       updateStatus('MIC PERMISSION DENIED', 'error');
       state.continuousListening = false;
       updateContinuousButtonUI();
@@ -90,9 +239,7 @@ function initRecognition() {
 
   recognition.onend = () => {
     isRecognitionRunning = false;
-    console.log('[Maddy Speech] Recognition ended.');
-    
-    // Looper restart: restart listening only if Maddy isn't speaking and continuous mode is active
+    // Autostart loop
     if (state.continuousListening && !isSpeaking) {
       startListeningLoop();
     }
@@ -110,40 +257,41 @@ function initRecognition() {
       }
     }
 
-    const transcriptText = (finalTranscript || interimTranscript).trim();
-    if (!transcriptText) return;
+    const text = (finalTranscript || interimTranscript).trim();
+    if (!text) return;
 
     if (!state.isActivated) {
-      // 1. Wake word watching mode
-      const lowerText = transcriptText.toLowerCase();
-      console.log(`[Maddy WakeWord] Heard: "${lowerText}"`);
-      
-      // Look for wake words: "maddy", "hey maddy", "wake up", "maddy wake up"
+      // 1. Wake word mode
+      const lower = text.toLowerCase();
+      console.log(`[Jarvis WakeWord] Capturing: "${lower}"`);
+
+      // Match vocal variations/transcripts of Jarvis or Maddy
       if (
-        lowerText.includes('maddy') || 
-        lowerText.includes('hey maddy') || 
-        lowerText.includes('wake up') || 
-        lowerText.includes('madam') || 
-        lowerText.includes('many') || 
-        lowerText.includes('medi') || 
-        lowerText.includes('daddy')
+        lower.includes('jarvis') ||
+        lower.includes('hey jarvis') ||
+        lower.includes('travis') ||
+        lower.includes('charvis') ||
+        lower.includes('job is') ||
+        lower.includes('service') ||
+        lower.includes('wake up') ||
+        lower.includes('maddy') ||
+        lower.includes('hey maddy') ||
+        lower.includes('madam')
       ) {
-        // Wake Word Triggered!
         triggerActivation();
       }
     } else {
-      // 2. Activated Command Capture Mode
-      voiceTranscript.innerText = transcriptText;
-      console.log(`[Maddy Command] Capture: "${transcriptText}"`);
+      // 2. Command capture mode
+      voiceTranscript.innerText = text;
       
       if (finalTranscript) {
-        let command = finalTranscript.trim();
-        // Remove trailing or leading wake words if the user said them during the command
-        command = command.replace(/^(hey\s+)?maddy\s*,?\s*/i, '');
-        command = command.replace(/wake\s*up/i, '').trim();
+        let cmd = finalTranscript.trim();
+        // Strip wake trigger keywords
+        cmd = cmd.replace(/^(hey\s+)?(jarvis|travis|charvis|maddy)\s*,?\s*/i, '');
+        cmd = cmd.replace(/wake\s*up/i, '').trim();
 
-        if (command) {
-          handleUserCommand(command);
+        if (cmd) {
+          handleUserCommand(cmd);
         }
         deactivateVoiceHUD();
       }
@@ -151,176 +299,146 @@ function initRecognition() {
   };
 }
 
-// Safely starts the speech recognition loop
 function startListeningLoop() {
   if (isSpeaking || isRecognitionRunning) return;
   try {
     recognition.start();
   } catch (e) {
-    console.warn('[Maddy Speech] Start loop error, retrying:', e);
+    console.warn('[Jarvis Speech] Recognition loop start bypass:', e);
   }
 }
 
-// Unlock audio context on first user click (Chrome/Edge Audio Security Policy)
+// User-gesture browser permissions unlock
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  console.log('[Maddy Audio] Core audio engines unlocked.');
-  
-  // Play a silent speak to warm up speech synthesis
-  const unlockUtterance = new SpeechSynthesisUtterance('');
-  synthesis.speak(unlockUtterance);
-  
-  // Play a startup notification
-  speak("Systems fully unlocked and listening.");
-  
-  // Remove the listener from body
+  console.log('[Jarvis Audio] Engine active.');
+
+  const warmth = new SpeechSynthesisUtterance('');
+  synthesis.speak(warmth);
+
+  speak("Jarvis initialized. Secure local systems online.");
+
   document.body.removeEventListener('click', unlockAudio);
 }
 
-// Trigger active Jarvis mode
+// Wake up Jarvis
 function triggerActivation() {
   if (state.isActivated) return;
-  
-  // Cancel any ongoing speaking
+
   synthesis.cancel();
   isSpeaking = false;
-
   state.isActivated = true;
-  
-  // Stop current recognition phase (we want to speak the greeting without Maddy hearing herself)
-  try {
-    recognition.stop();
-  } catch(e) {}
-  
-  // UI Activation updates
-  orbContainer.classList.remove('speaking');
-  orbContainer.classList.add('listening');
-  updateStatus('WAKING UP...', 'listening');
-  
-  // Show Voice HUD
-  voiceHud.classList.remove('hidden');
-  voiceTranscript.innerText = "Waking up...";
 
-  // Play Sound Cues
+  try { recognition.stop(); } catch (e) {}
+
+  updateStatus('WAKING UP...', 'listening');
+  voiceHud.classList.remove('hidden');
+  voiceTranscript.innerText = "Listening...";
+
   beepOn.volume = 0.3;
   beepOn.play().catch(() => {});
 
-  // Speak the wake-up confirmation verbally
   speak("Yes, I am awake. What is your command?", () => {
-    // When greeting finishes speaking, start capture session for command
-    voiceTranscript.innerText = "Speak your command...";
+    voiceTranscript.innerText = "Speak command...";
     updateStatus('LISTENING COMMAND...', 'listening');
     startListeningLoop();
   });
 
-  // Reset auto-deactivation timer if the user says nothing for 8 seconds
   if (window.activationTimeout) clearTimeout(window.activationTimeout);
   window.activationTimeout = setTimeout(() => {
-    if (state.isActivated && voiceTranscript.innerText === "Speak your command...") {
+    if (state.isActivated && voiceTranscript.innerText === "Speak command...") {
       deactivateVoiceHUD();
     }
   }, 8000);
 }
 
-// Deactivate active listening mode, return to background watch
+// Deactivate voice overlay
 function deactivateVoiceHUD() {
   state.isActivated = false;
-  orbContainer.classList.remove('listening');
   voiceHud.classList.add('hidden');
-  
+
   beepOff.volume = 0.2;
   beepOff.play().catch(() => {});
-  
+
   if (isSpeaking) {
     updateStatus('SPEAKING...', 'speaking');
-    orbContainer.classList.add('speaking');
   } else {
-    updateStatus('MADDY WATCHING (SAY "MADDY")', 'online');
+    updateStatus('JARVIS STANDBY (SAY "JARVIS")', 'online');
     startListeningLoop();
   }
 }
 
-// Status UI updates
+// Status Updates (HUD + 3D Orb)
 function updateStatus(text, mode) {
   statusText.innerText = text;
-  
-  // Reset classes
   statusDot.className = 'status-dot';
-  orbContainer.classList.remove('listening', 'speaking');
 
   if (mode === 'listening') {
     statusDot.classList.add('listening');
-    orbContainer.classList.add('listening');
+    updateOrbState('listening');
   } else if (mode === 'speaking') {
     statusDot.classList.add('speaking');
-    orbContainer.classList.add('speaking');
-  } else if (mode === 'online') {
+    updateOrbState('speaking');
+  } else if (text === 'THINKING...') {
     statusDot.classList.add('pulsed');
-  } else if (mode === 'error') {
-    statusDot.style.backgroundColor = 'var(--accent-magenta)';
-    statusDot.style.boxShadow = '0 0 10px var(--accent-magenta)';
+    updateOrbState('thinking');
   } else {
     statusDot.classList.add('pulsed');
+    updateOrbState('idle');
   }
 }
 
-// --- COMMAND EXECUTION ENGINE ---
-
-// Handles both typed & voice commands
+// Route command actions
 async function handleUserCommand(command) {
   if (!command.trim()) return;
 
-  // Add user message to Chat Log
   addChatMessage('You', command, 'user');
   commandInput.value = '';
 
   updateStatus('THINKING...', 'online');
-  
+
   try {
-    // 1. Route to backend Express API (for opening/closing apps or URLs)
+    // 1. Post to secure backend Express API
     const response = await fetch('/api/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command })
     });
-    
+
     const result = await response.json();
-    
+
     if (response.ok && result.success) {
       addChatMessage('System CLI', result.message, 'system');
       speak(result.message);
       return;
     }
 
-    // 2. If CLI execution is not matched, pass to Gemini / World Knowledge
-    const reply = await queryWorldKnowledge(command);
-    addChatMessage('Maddy', reply, 'ai');
-    speak(reply);
+    // 2. Query Gemini Core Chat Proxy
+    const answer = await queryWorldKnowledge(command);
+    addChatMessage('Jarvis', answer, 'ai');
+    speak(answer);
   } catch (err) {
-    console.warn('[Maddy Backend] Backend offline or errored. Falling back to local brain.');
-    const reply = await queryWorldKnowledge(command);
-    addChatMessage('Maddy', reply, 'ai');
-    speak(reply);
+    console.warn('[Jarvis Backend] Local server errored, executing local answers.');
+    const answer = await queryWorldKnowledge(command);
+    addChatMessage('Jarvis', answer, 'ai');
+    speak(answer);
   }
 }
 
-// Query AI Brain (Gemini API / Local Rules)
+// Secure World Knowledge
 async function queryWorldKnowledge(query) {
-  const lowercaseQuery = query.toLowerCase().trim();
+  const lower = query.toLowerCase().trim();
 
-  // Basic local offline matches
-  if (lowercaseQuery === 'hello' || lowercaseQuery === 'hi' || lowercaseQuery === 'hey') {
-    return "Hello! I am Maddy, your digital assistant. I'm online. How can I help you today?";
+  // Quick Offline Local Matches
+  if (lower === 'hello' || lower === 'hi' || lower === 'hey') {
+    return "Hello. I am Jarvis, your digital system administrator. I am fully operational.";
   }
-  if (lowercaseQuery === 'who are you' || lowercaseQuery === 'what is your name') {
-    return "I am Maddy, your Jarvis-style frontend assistant. I can open applications, run searches, or answer questions.";
-  }
-  if (lowercaseQuery === 'help' || lowercaseQuery === 'what can you do') {
-    return "You can command me to open apps like Notepad, Paint, or Calculator, or open websites like YouTube. You can also ask me questions about anything.";
+  if (lower === 'who are you' || lower === 'what is your name') {
+    return "I am Jarvis, your systems controller and voice assistant. Ready for your instructions.";
   }
 
-  // 1. Try secure backend chat proxy (loading API key from server-side .env)
+  // 1. Request Secure Backend API
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -334,10 +452,10 @@ async function queryWorldKnowledge(query) {
       }
     }
   } catch (err) {
-    console.warn('[Maddy AI] Backend secure proxy unavailable, attempting browser fallback:', err);
+    console.warn('[Jarvis Core] Backend chat offline, using client fallback:', err);
   }
 
-  // 2. Client-side browser fallback (if client key is provided)
+  // 2. Client fallback key
   if (state.geminiKey) {
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`, {
@@ -346,7 +464,7 @@ async function queryWorldKnowledge(query) {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are Maddy, a premium, hyper-intelligent Jarvis-like voice assistant. Provide a brief, concise, and helpful spoken-style answer (maximum 2-3 sentences) suitable for text-to-speech reading for this query: "${query}"`
+              text: `You are Jarvis, a premium, hyper-intelligent system assistant. Provide a brief, concise, and helpful spoken-style answer (maximum 2-3 sentences) suitable for text-to-speech reading for: "${query}"`
             }]
           }]
         })
@@ -356,41 +474,33 @@ async function queryWorldKnowledge(query) {
         return data.candidates[0].content.parts[0].text;
       }
     } catch (e) {
-      console.error('[Maddy AI] Client fallback query error:', e);
       return "I encountered a minor glitch connecting to my neural network, but I am still online. Please check your Gemini API key in settings.";
     }
   }
 
-  // 3. Inform user how to set up key if both server and client keys are missing
-  return `To enable my full world knowledge database, please input your Gemini API Key in the settings panel (gear icon) or create a .env file on the server. In the meantime, you can ask me to open applications or search the web! For example, say "search for ${query}" to search Google.`;
+  return `To query world knowledge, please input your Gemini API Key in the settings panel (gear icon) or configure a .env file. Otherwise, ask me to open applications or search the web! For example, say "search for ${query}" to search Google.`;
 }
 
-// Speech Synthesis speak engine with ignore-loops
+// Speak Utterance Engine
 function speak(text, onEndCallback = null) {
   if (!state.speakReplies || !synthesis) {
     if (onEndCallback) onEndCallback();
     return;
   }
 
-  // Stop any active speaking
   synthesis.cancel();
   isSpeaking = true;
 
-  // Temporarily stop microphone listening so Maddy doesn't hear herself
   if (isRecognitionRunning) {
-    try {
-      recognition.stop();
-    } catch(e) {}
+    try { recognition.stop(); } catch(e) {}
   }
 
-  // Strip markdown formatting for readable speaking
-  const cleanText = text.replace(/[*#_`[\]]/g, '').trim();
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  
-  // Apply voice properties
+  const clean = text.replace(/[*#_`[\]]/g, '').trim();
+  const utterance = new SpeechSynthesisUtterance(clean);
+
   if (state.selectedVoiceName) {
-    const selectedVoice = state.voices.find(v => v.name === state.selectedVoiceName);
-    if (selectedVoice) utterance.voice = selectedVoice;
+    const v = state.voices.find(voice => voice.name === state.selectedVoiceName);
+    if (v) utterance.voice = v;
   }
   utterance.rate = state.speechRate;
 
@@ -398,19 +508,15 @@ function speak(text, onEndCallback = null) {
     updateStatus('SPEAKING...', 'speaking');
   };
 
-  const handleSpeechEnded = () => {
+  const handleEnded = () => {
     isSpeaking = false;
-    console.log('[Maddy Speech] Speaking finished.');
-    
     if (onEndCallback) {
-      // Run custom callback (e.g. restart listening for command)
       onEndCallback();
     } else {
-      // Normal end: return to watch mode and restart recognition loop
       if (state.isActivated) {
         updateStatus('LISTENING COMMAND...', 'listening');
       } else {
-        updateStatus('MADDY WATCHING (SAY "MADDY")', 'online');
+        updateStatus('JARVIS STANDBY (SAY "JARVIS")', 'online');
       }
       if (state.continuousListening) {
         startListeningLoop();
@@ -418,58 +524,57 @@ function speak(text, onEndCallback = null) {
     }
   };
 
-  utterance.onend = handleSpeechEnded;
+  utterance.onend = handleEnded;
   utterance.onerror = (e) => {
-    console.warn('[Maddy Speech] TTS error:', e);
-    handleSpeechEnded();
+    console.warn('[Jarvis Speech] TTS Output Error:', e);
+    handleEnded();
   };
 
   synthesis.speak(utterance);
 }
 
-// Add Chat Message bubble to logs
+// UI Chat Logs
 function addChatMessage(sender, text, type) {
-  const msgEl = document.createElement('div');
-  msgEl.className = `chat-msg ${type}-msg`;
+  const msg = document.createElement('div');
+  msg.className = `chat-msg ${type}-msg`;
 
-  let avatarIcon = '<i class="fa-solid fa-microchip"></i>';
-  let metaTag = 'MADDY // AI';
+  let avatar = '<i class="fa-solid fa-microchip"></i>';
+  let meta = 'JARVIS // AI';
 
   if (type === 'user') {
-    avatarIcon = '<i class="fa-solid fa-user"></i>';
-    metaTag = 'USER // VOICE';
+    avatar = '<i class="fa-solid fa-user"></i>';
+    meta = 'USER // VOICE';
   } else if (type === 'system') {
-    avatarIcon = '<i class="fa-solid fa-terminal"></i>';
-    metaTag = 'MADDY // OS_SYSTEM';
+    avatar = '<i class="fa-solid fa-terminal"></i>';
+    meta = 'JARVIS // OS_SYSTEM';
   }
 
-  msgEl.innerHTML = `
-    <div class="msg-avatar">${avatarIcon}</div>
+  msg.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
     <div class="msg-content">
-      <div class="msg-meta">${metaTag}</div>
+      <div class="msg-meta">${meta}</div>
       <p>${text}</p>
     </div>
   `;
 
-  chatLogs.appendChild(msgEl);
+  chatLogs.appendChild(msg);
   chatLogs.scrollTop = chatLogs.scrollHeight;
 }
 
-// Populates browser voice pack options
+// Available speech synthesis voice list
 function populateVoices() {
   if (!synthesis) return;
   state.voices = synthesis.getVoices();
-  
   voiceSelect.innerHTML = '<option value="">Default OS Voice</option>';
   
   state.voices.forEach(voice => {
-    const option = document.createElement('option');
-    option.value = voice.name;
-    option.textContent = `${voice.name} (${voice.lang})`;
+    const opt = document.createElement('option');
+    opt.value = voice.name;
+    opt.textContent = `${voice.name} (${voice.lang})`;
     if (voice.name === state.selectedVoiceName) {
-      option.selected = true;
+      opt.selected = true;
     }
-    voiceSelect.appendChild(option);
+    voiceSelect.appendChild(opt);
   });
 }
 
@@ -483,9 +588,8 @@ function updateContinuousButtonUI() {
   }
 }
 
-// Bind UI controls
+// Event bindings
 function setupUIEvents() {
-  // Input trigger
   sendTrigger.addEventListener('click', () => {
     const val = commandInput.value.trim();
     if (val) handleUserCommand(val);
@@ -498,12 +602,10 @@ function setupUIEvents() {
     }
   });
 
-  // Clicking the main orb wakes up Maddy immediately
   orbContainer.addEventListener('click', () => {
     triggerActivation();
   });
 
-  // Settings Panel Actions
   settingsToggle.addEventListener('click', () => {
     settingsPanel.classList.toggle('hidden');
   });
@@ -528,44 +630,39 @@ function setupUIEvents() {
     rateValue.innerText = e.target.value + 'x';
   });
 
-  // Toggle Continuous Mode
   voiceLockBtn.addEventListener('click', () => {
     state.continuousListening = !state.continuousListening;
     updateContinuousButtonUI();
     
     if (state.continuousListening) {
       initRecognition();
-      addChatMessage('System', 'Continuous voice detection activated.', 'system');
-      speak("Continuous voice detection activated.");
+      addChatMessage('System', 'Continuous voice detection active.', 'system');
+      speak("Continuous voice detection active.");
     } else {
       if (recognition) {
         try { recognition.abort(); } catch(e) {}
       }
-      addChatMessage('System', 'Continuous voice detection deactivated. Manual activation only.', 'system');
+      addChatMessage('System', 'Continuous voice detection deactivated.', 'system');
       speak("Continuous voice detection deactivated.");
     }
   });
 
-  // Microphone trigger (forces quick activation)
   micTrigger.addEventListener('click', () => {
     triggerActivation();
   });
 
-  // Time HUD ticker
   setInterval(() => {
-    const date = new Date();
-    hudTime.innerText = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const d = new Date();
+    hudTime.innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }, 1000);
 }
 
-// Help chips
 window.executeHint = function(command) {
   handleUserCommand(command);
 };
 
-// --- INITIALIZATION ---
+// --- INITIALIZE ON CONTENT LOAD ---
 window.addEventListener('DOMContentLoaded', () => {
-  // Restore Settings
   geminiKeyInput.value = state.geminiKey;
   voiceFeedbackCheckbox.checked = localStorage.getItem('maddy_speak_replies') !== 'false';
   voiceRateSlider.value = state.speechRate;
@@ -574,20 +671,18 @@ window.addEventListener('DOMContentLoaded', () => {
   setupUIEvents();
   updateContinuousButtonUI();
   
-  // Voices populate
   populateVoices();
   if (synthesis && synthesis.onvoiceschanged !== undefined) {
     synthesis.onvoiceschanged = populateVoices;
   }
 
-  // Setup gesture unlock to resolve browser audio policy blocks
-  document.body.addEventListener('click', unlockAudio);
+  // Load 3D WebGL Orb
+  init3DOrb();
 
-  // Initialize Speech Recognition
+  document.body.addEventListener('click', unlockAudio);
   initRecognition();
   
-  // Add a prompt to screen instructing user to click
   setTimeout(() => {
-    addChatMessage('System', 'Welcome. Please **click anywhere on the screen** to activate Maddy\'s voice engine and start listening.', 'system');
+    addChatMessage('System', 'Welcome. Click anywhere on the screen to boot Jarvis\'s voice core.', 'system');
   }, 500);
 });

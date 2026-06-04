@@ -10,7 +10,7 @@ try:
     import pyttsx3
     import requests
 except ImportError:
-    print("[Maddy OS Client] Missing dependencies. Installing SpeechRecognition, pyttsx3, requests...")
+    print("[Jarvis Client] Missing dependencies. Installing SpeechRecognition, pyttsx3, requests...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "SpeechRecognition", "pyttsx3", "requests"])
     import speech_recognition as sr
     import pyttsx3
@@ -35,15 +35,15 @@ for voice in voices:
 engine.setProperty('rate', 175) # Conversational speaking speed
 
 def speak(text):
-    print(f"[Maddy]: {text}")
+    print(f"[Jarvis]: {text}")
     engine.say(text)
     engine.runAndWait()
 
 def listen_for_command(recognizer, source, is_wake_word_mode=True):
     if is_wake_word_mode:
-        print("[Maddy Client] Listening for wake word: 'Maddy' or 'Hey Maddy'...")
+        print("[Jarvis Client] Listening for wake word: 'Jarvis' or 'Hey Jarvis'...")
     else:
-        print("[Maddy Client] Listening for command...")
+        print("[Jarvis Client] Listening for command...")
         
     try:
         audio = recognizer.listen(source, timeout=8, phrase_time_limit=5)
@@ -68,47 +68,31 @@ def handle_system_command(command):
                 speak(result.get("message"))
                 return True
     except Exception as e:
-        print(f"[Maddy Client] Express server offline. Executing command locally. {e}")
+        print(f"[Jarvis Client] Express server offline. Executing command locally. {e}")
         
     # Local fallback command handler if the Node.js server is stopped
     clean_cmd = command.lower().strip()
     if clean_cmd.startswith("open ") or clean_cmd.startswith("launch "):
         target = clean_cmd.replace("open ", "").replace("launch ", "").strip()
-        if target == "notepad":
-            os.system("start notepad.exe")
-            speak("Opening Notepad on your laptop.")
-            return True
-        elif target == "calculator" or target == "calc":
-            os.system("start calc.exe")
-            speak("Opening Calculator.")
-            return True
-        elif target == "paint":
-            os.system("start mspaint.exe")
-            speak("Opening MS Paint.")
-            return True
-        elif "youtube" in target:
-            os.system("start https://www.youtube.com")
-            speak("Opening YouTube in your browser.")
-            return True
-        elif "google" in target:
-            os.system("start https://www.google.com")
-            speak("Opening Google.")
-            return True
+        # Safe character validation to prevent script execution injection
+        if not all(c.isalnum() or c.isspace() or c in "-_" for c in target):
+            speak("I cannot execute commands containing special characters.")
+            return False
+            
+        os.system(f'start "" "{target}"')
+        speak(f"Opening {target} on your laptop.")
+        return True
             
     elif clean_cmd.startswith("close ") or clean_cmd.startswith("exit "):
         target = clean_cmd.replace("close ", "").replace("exit ", "").strip()
-        if target == "notepad":
-            os.system("taskkill /IM notepad.exe /F")
-            speak("Closed Notepad.")
-            return True
-        elif target == "calculator" or target == "calc":
-            os.system("taskkill /IM CalculatorApp.exe /F")
-            speak("Closed Calculator.")
-            return True
-        elif target == "paint":
-            os.system("taskkill /IM mspaint.exe /F")
-            speak("Closed Paint.")
-            return True
+        if not all(c.isalnum() or c.isspace() or c in "-_" for c in target):
+            speak("I cannot execute close commands containing special characters.")
+            return False
+            
+        procName = target if target.endswith(".exe") else f"{target}.exe"
+        os.system(f"taskkill /IM {procName} /F")
+        speak(f"Closed {target}.")
+        return True
             
     return False
 
@@ -118,17 +102,17 @@ def main():
     
     # Calibrate ambient noise
     with microphone as source:
-        print("[Maddy Client] Calibrating microphone for ambient noise...")
+        print("[Jarvis Client] Calibrating microphone for ambient noise...")
         recognizer.adjust_for_ambient_noise(source, duration=1)
         
-    speak("Maddy Python Voice Assistant Client is running. Say Maddy to activate.")
+    speak("Jarvis Python Voice Assistant Client is running. Say Jarvis to activate.")
 
     while True:
         with microphone as source:
             wake_phrase = listen_for_command(recognizer, source, is_wake_word_mode=True)
             
-            # Check wake word
-            if "maddy" in wake_phrase or "hey maddy" in wake_phrase or "wake up" in wake_phrase or "madam" in wake_phrase:
+            # Check wake word (including phonetic matches)
+            if any(w in wake_phrase for w in ["jarvis", "hey jarvis", "travis", "charvis", "job is", "service", "wake up"]):
                 speak("Yes, I am awake. What is your command?")
                 
                 # Capture the command
@@ -137,9 +121,9 @@ def main():
                 if command_phrase:
                     success = handle_system_command(command_phrase)
                     if not success:
-                        # Pass to general intelligence or search
+                        # Pass to general search
                         search_url = f"https://www.google.com/search?q={command_phrase.replace(' ', '+')}"
-                        speak(f"Command not recognized as local app. Let me search Google for: {command_phrase}")
+                        speak(f"Searching Google for: {command_phrase}")
                         os.system(f"start {search_url}")
                 else:
                     speak("I didn't hear a command. Returning to standby.")
@@ -150,4 +134,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nExiting Maddy Voice Client...")
+        print("\nExiting Jarvis Voice Client...")

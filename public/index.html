@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -24,7 +26,7 @@
   <!-- HUD Header -->
   <header class="hud-header">
     <div class="hud-logo">
-      <span class="logo-accent">//</span> MADDY v3.5
+      <span class="logo-accent">//</span> JARVIS v3.5
     </div>
     <div class="hud-status-panel">
       <div class="status-indicator">
@@ -37,19 +39,12 @@
   </header>
 
   <main class="main-container">
-    <!-- Center Section: Jarvis Core Orb -->
+    <!-- Center Section: Jarvis Core 3D Particle Orb -->
     <section class="orb-section">
       <div class="orb-container" id="orb-trigger">
-        <div class="orb-glowing-ring ring-1"></div>
-        <div class="orb-glowing-ring ring-2"></div>
-        <div class="orb-glowing-ring ring-3"></div>
-        <div class="orb-core" id="maddy-orb">
-          <div class="pulse-wave wave-1"></div>
-          <div class="pulse-wave wave-2"></div>
-          <div class="inner-geometry"></div>
-        </div>
+        <div class="orb-canvas-container" id="canvas-container"></div>
       </div>
-      <div class="orb-subtext" id="orb-subtext">SAY "MADDY" OR CLICK ORB TO TALK</div>
+      <div class="orb-subtext" id="orb-subtext">SAY "JARVIS" OR CLICK TO WAKE UP</div>
     </section>
 
     <!-- Chat Display / Perplexity Output Area -->
@@ -68,8 +63,8 @@
           <div class="chat-msg ai-msg">
             <div class="msg-avatar"><i class="fa-solid fa-microchip"></i></div>
             <div class="msg-content">
-              <div class="msg-meta">MADDY CORE // SYSTEM STARTED</div>
-              <p>System initialized. I am online and listening. You can wake me up anytime by saying my name <strong>"Maddy"</strong> or clicking the cyber-orb above.</p>
+              <div class="msg-meta">JARVIS CORE // SYSTEM STARTED</div>
+              <p>System initialized. I am online and listening. You can wake me up anytime by saying my name <strong>"Jarvis"</strong> or clicking the 3D core orb above.</p>
               <p>Try commands like:</p>
               <div class="hint-chips">
                 <button class="hint-chip" onclick="executeHint('open youtube')"><i class="fa-brands fa-youtube"></i> Open YouTube</button>
@@ -90,7 +85,7 @@
           <i class="fa-solid fa-microphone-slash active-mic" id="continuous-indicator"></i>
         </button>
         
-        <input type="text" id="command-input" placeholder="Ask Maddy anything or speak your command..." autocomplete="off">
+        <input type="text" id="command-input" placeholder="Ask Jarvis anything or speak your command..." autocomplete="off">
         
         <button class="icon-btn mic-btn" id="mic-trigger" title="Speak command">
           <i class="fa-solid fa-microphone" id="mic-icon"></i>
@@ -122,12 +117,12 @@
   </button>
 
   <div class="settings-panel glassmorphism hidden" id="settings-panel">
-    <h3>Maddy System Settings</h3>
+    <h3>Jarvis System Settings</h3>
     
     <div class="setting-group">
       <label for="gemini-key"><i class="fa-solid fa-key"></i> Gemini API Key (World Knowledge)</label>
       <input type="password" id="gemini-key" placeholder="Enter Gemini API Key..." />
-      <span class="setting-help">If empty, Maddy uses local browser-based response patterns.</span>
+      <span class="setting-help">If empty, Jarvis uses local browser-based response patterns.</span>
     </div>
 
     <div class="setting-group">
