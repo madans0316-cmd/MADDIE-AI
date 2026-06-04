@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maddy - Jarvis OS Interface</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Cyber Background Grid & Stars -->
+  <div class="cyber-bg">
+    <div class="grid-overlay"></div>
+    <div class="glow-radial-1"></div>
+    <div class="glow-radial-2"></div>
+  </div>
+
+  <!-- HUD Header -->
+  <header class="hud-header">
+    <div class="hud-logo">
+      <span class="logo-accent">//</span> MADDY v3.5
+    </div>
+    <div class="hud-status-panel">
+      <div class="status-indicator">
+        <span class="status-dot pulsed" id="status-dot"></span>
+        <span class="status-text" id="status-text">INITIALIZING CORE...</span>
+      </div>
+      <div class="divider"></div>
+      <div class="hud-time" id="hud-time">10:59:04 AM</div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Center Section: Jarvis Core Orb -->
+    <section class="orb-section">
+      <div class="orb-container" id="orb-trigger">
+        <div class="orb-glowing-ring ring-1"></div>
+        <div class="orb-glowing-ring ring-2"></div>
+        <div class="orb-glowing-ring ring-3"></div>
+        <div class="orb-core" id="maddy-orb">
+          <div class="pulse-wave wave-1"></div>
+          <div class="pulse-wave wave-2"></div>
+          <div class="inner-geometry"></div>
+        </div>
+      </div>
+      <div class="orb-subtext" id="orb-subtext">SAY "MADDY" OR CLICK ORB TO TALK</div>
+    </section>
+
+    <!-- Chat Display / Perplexity Output Area -->
+    <section class="display-section">
+      <div class="glass-terminal" id="chat-container">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="terminal-title">MADDY_SYS_FEED</span>
+        </div>
+        <div class="chat-logs" id="chat-logs">
+          <!-- Initial greeting message -->
+          <div class="chat-msg ai-msg">
+            <div class="msg-avatar"><i class="fa-solid fa-microchip"></i></div>
+            <div class="msg-content">
+              <div class="msg-meta">MADDY CORE // SYSTEM STARTED</div>
+              <p>System initialized. I am online and listening. You can wake me up anytime by saying my name <strong>"Maddy"</strong> or clicking the cyber-orb above.</p>
+              <p>Try commands like:</p>
+              <div class="hint-chips">
+                <button class="hint-chip" onclick="executeHint('open youtube')"><i class="fa-brands fa-youtube"></i> Open YouTube</button>
+                <button class="hint-chip" onclick="executeHint('open notepad')"><i class="fa-solid fa-file-lines"></i> Open Notepad</button>
+                <button class="hint-chip" onclick="executeHint('search for space travel')"><i class="fa-solid fa-magnifying-glass"></i> Search Space Travel</button>
+                <button class="hint-chip" onclick="executeHint('tell me a science fact')"><i class="fa-solid fa-brain"></i> Science Fact</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Section: Perplexity-style Command bar -->
+    <section class="input-section">
+      <div class="search-container glassmorphism">
+        <button class="icon-btn focus-btn" id="voice-lock-btn" title="Toggle Continuous Listening Mode">
+          <i class="fa-solid fa-microphone-slash active-mic" id="continuous-indicator"></i>
+        </button>
+        
+        <input type="text" id="command-input" placeholder="Ask Maddy anything or speak your command..." autocomplete="off">
+        
+        <button class="icon-btn mic-btn" id="mic-trigger" title="Speak command">
+          <i class="fa-solid fa-microphone" id="mic-icon"></i>
+        </button>
+        <button class="icon-btn send-btn" id="send-trigger" title="Submit command">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+      </div>
+      
+      <!-- Speech HUD (Only visible when listening) -->
+      <div class="voice-hud hidden" id="voice-hud">
+        <div class="wave-visualizer">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+        <div class="voice-transcript" id="voice-transcript">Listening for command...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings Gear and Floating Action Panel -->
+  <button class="settings-toggle-btn" id="settings-toggle" title="Settings">
+    <i class="fa-solid fa-gear"></i>
+  </button>
+
+  <div class="settings-panel glassmorphism hidden" id="settings-panel">
+    <h3>Maddy System Settings</h3>
+    
+    <div class="setting-group">
+      <label for="gemini-key"><i class="fa-solid fa-key"></i> Gemini API Key (World Knowledge)</label>
+      <input type="password" id="gemini-key" placeholder="Enter Gemini API Key..." />
+      <span class="setting-help">If empty, Maddy uses local browser-based response patterns.</span>
+    </div>
+
+    <div class="setting-group">
+      <label for="voice-select"><i class="fa-solid fa-volume-high"></i> Voice Engine Selection</label>
+      <select id="voice-select">
+        <option value="">Default OS Voice</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <label for="voice-rate"><i class="fa-solid fa-gauge"></i> Speaking Speed</label>
+      <div class="slider-container">
+        <input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="1.0">
+        <span id="rate-value">1.0x</span>
+      </div>
+    </div>
+
+    <div class="setting-group checkbox-group">
+      <input type="checkbox" id="voice-feedback" checked>
+      <label for="voice-feedback"><i class="fa-solid fa-comment-dots"></i> Speak replies back (TTS)</label>
+    </div>
+
+    <button class="save-settings-btn" id="save-settings">Save & Initialize Core</button>
+  </div>
+
+  <!-- Audio feedback effects -->
+  <audio id="beep-on" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+  <audio id="beep-off" src="https://assets.mixkit.co/active_storage/sfx/2569/2569-84.wav" preload="auto"></audio>
+
+  <script src="app.js"></script>
+</body>
+</html>
