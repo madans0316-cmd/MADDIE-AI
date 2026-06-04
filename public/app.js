@@ -1,8 +1,9 @@
 // --- 3D GLOWING PARTICLE ORB STATE (THREE.JS) ---
-let scene, camera, renderer, particleSystem;
-const particleCount = 800;
+let scene, camera, renderer, particleSystem1, particleSystem2;
+const particleCount1 = 400; // Inner Core
+const particleCount2 = 500; // Outer Shell
 let orbState = 'idle'; // idle, listening, thinking, speaking
-let particleGeometry;
+let particleGeometry1, particleGeometry2;
 
 // --- STATE CONFIGURATION ---
 const state = {
@@ -51,7 +52,7 @@ let isSpeaking = false;
 let isRecognitionRunning = false;
 let audioUnlocked = false; // Browser Web Audio permission flag
 
-// Initialize 3D Particle Orb Core (WebGL Three.js)
+// Initialize 3D Particle Orb Core (WebGL Three.js) - Featuring Two Concentric Animated Cores
 function init3DOrb() {
   const container = document.getElementById('canvas-container');
   if (!container) return;
@@ -72,47 +73,78 @@ function init3DOrb() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.appendChild(renderer.domElement);
 
-  // Buffer Geometry for high-performance particle math
-  particleGeometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(particleCount * 3);
-  const colors = new Float32Array(particleCount * 3);
+  // Generate dynamic soft glowing circle texture on-the-fly
+  const pTexture = createCircleTexture();
 
-  const initialColor = new THREE.Color('#00f0ff'); // Start with cyan
+  // 1. INNER CORE GEOMETRY & MATERIAL (Dark Blue Base)
+  particleGeometry1 = new THREE.BufferGeometry();
+  const positions1 = new Float32Array(particleCount1 * 3);
+  const colors1 = new Float32Array(particleCount1 * 3);
+  const color1 = new THREE.Color('#0b132b'); // Deep Dark Blue
 
-  for (let i = 0; i < particleCount; i++) {
-    // Generate uniform spherical shell coordinates
+  for (let i = 0; i < particleCount1; i++) {
     const u = Math.random();
     const v = Math.random();
     const theta = u * 2.0 * Math.PI;
     const phi = Math.acos(2.0 * v - 1.0);
-    const r = 0.72 + Math.random() * 0.14; // soft layer thickness
+    const r = 0.45 + Math.random() * 0.08; // Core radius
 
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
+    positions1[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    positions1[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions1[i * 3 + 2] = r * Math.cos(phi);
 
-    colors[i * 3] = initialColor.r;
-    colors[i * 3 + 1] = initialColor.g;
-    colors[i * 3 + 2] = initialColor.b;
+    colors1[i * 3] = color1.r;
+    colors1[i * 3 + 1] = color1.g;
+    colors1[i * 3 + 2] = color1.b;
   }
+  particleGeometry1.setAttribute('position', new THREE.BufferAttribute(positions1, 3));
+  particleGeometry1.setAttribute('color', new THREE.BufferAttribute(colors1, 3));
 
-  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-  // Generate dynamic soft glowing circle texture on-the-fly
-  const pTexture = createCircleTexture();
-
-  const particleMaterial = new THREE.PointsMaterial({
-    size: 0.05,
+  const material1 = new THREE.PointsMaterial({
+    size: 0.045,
     map: pTexture,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     vertexColors: true
   });
+  particleSystem1 = new THREE.Points(particleGeometry1, material1);
+  scene.add(particleSystem1);
 
-  particleSystem = new THREE.Points(particleGeometry, particleMaterial);
-  scene.add(particleSystem);
+  // 2. OUTER CORE GEOMETRY & MATERIAL (Light Blue Base)
+  particleGeometry2 = new THREE.BufferGeometry();
+  const positions2 = new Float32Array(particleCount2 * 3);
+  const colors2 = new Float32Array(particleCount2 * 3);
+  const color2 = new THREE.Color('#00d2ff'); // Bright Light Blue
+
+  for (let i = 0; i < particleCount2; i++) {
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = 0.82 + Math.random() * 0.12; // Outer radius
+
+    positions2[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    positions2[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions2[i * 3 + 2] = r * Math.cos(phi);
+
+    colors2[i * 3] = color2.r;
+    colors2[i * 3 + 1] = color2.g;
+    colors2[i * 3 + 2] = color2.b;
+  }
+  particleGeometry2.setAttribute('position', new THREE.BufferAttribute(positions2, 3));
+  particleGeometry2.setAttribute('color', new THREE.BufferAttribute(colors2, 3));
+
+  const material2 = new THREE.PointsMaterial({
+    size: 0.045,
+    map: pTexture,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    vertexColors: true
+  });
+  particleSystem2 = new THREE.Points(particleGeometry2, material2);
+  scene.add(particleSystem2);
 
   animateOrb();
 }
@@ -137,63 +169,100 @@ function createCircleTexture() {
   return texture;
 }
 
-// Core animation tick for 3D sphere state morphing
+// Core animation tick for double concentric 3D sphere state morphing
 let clock = new THREE.Clock();
 
 function animateOrb() {
   requestAnimationFrame(animateOrb);
 
-  if (!particleSystem) return;
+  if (!particleSystem1 || !particleSystem2) return;
 
   const time = clock.getElapsedTime();
 
   if (orbState === 'idle') {
-    // Soft floating rotation
-    particleSystem.rotation.y = time * 0.16;
-    particleSystem.rotation.x = time * 0.06;
-    const pulse = 1.0 + Math.sin(time * 1.5) * 0.04;
-    particleSystem.scale.set(pulse, pulse, pulse);
-    setParticleColor('#00f0ff'); // Cyan
+    // Concentric spheres rotate in opposite directions
+    particleSystem1.rotation.y = time * 0.16;
+    particleSystem1.rotation.x = time * 0.06;
+    
+    particleSystem2.rotation.y = -time * 0.12;
+    particleSystem2.rotation.x = -time * 0.04;
+
+    // Out-of-phase breathing pulses
+    const pulse1 = 1.0 + Math.sin(time * 1.5) * 0.03;
+    const pulse2 = 1.0 + Math.cos(time * 1.5) * 0.04;
+    particleSystem1.scale.set(pulse1, pulse1, pulse1);
+    particleSystem2.scale.set(pulse2, pulse2, pulse2);
+
+    // Set colors: Inner is deep dark blue, outer is bright light blue
+    setParticleColor(particleGeometry1, '#0b132b', particleCount1);
+    setParticleColor(particleGeometry2, '#00d2ff', particleCount2);
 
   } else if (orbState === 'listening') {
-    // Breathing energetic expansion, fast rotation
-    particleSystem.rotation.y = time * 0.7;
-    particleSystem.rotation.x = time * 0.3;
-    const pulse = 1.1 + Math.sin(time * 9) * 0.12;
-    particleSystem.scale.set(pulse, pulse, pulse);
-    setParticleColor('#ff007c'); // Hot pink
+    // Dynamic rapid rotation
+    particleSystem1.rotation.y = time * 0.8;
+    particleSystem1.rotation.x = time * 0.4;
+    
+    particleSystem2.rotation.y = -time * 0.6;
+    particleSystem2.rotation.z = time * 0.3;
+
+    const pulse1 = 1.08 + Math.sin(time * 9.5) * 0.08;
+    const pulse2 = 1.12 + Math.cos(time * 9.5) * 0.1;
+    particleSystem1.scale.set(pulse1, pulse1, pulse1);
+    particleSystem2.scale.set(pulse2, pulse2, pulse2);
+
+    // Transition to energetic active state colors (Magenta/Pink cores)
+    setParticleColor(particleGeometry1, '#ff007c', particleCount1);
+    setParticleColor(particleGeometry2, '#ff66b2', particleCount2);
 
   } else if (orbState === 'thinking') {
-    // Rapid spiral swirl
-    particleSystem.rotation.y = time * 1.8;
-    particleSystem.rotation.z = time * 0.6;
-    const pulse = 0.96 + Math.sin(time * 18) * 0.05;
-    particleSystem.scale.set(pulse, pulse, pulse);
-    setParticleColor('#bd00ff'); // Purple
+    // Spiral swirl vortex rotation
+    particleSystem1.rotation.y = time * 1.9;
+    particleSystem1.rotation.z = time * 0.7;
+    
+    particleSystem2.rotation.y = -time * 1.5;
+    particleSystem2.rotation.x = -time * 0.5;
+
+    const pulse1 = 0.96 + Math.sin(time * 18) * 0.04;
+    const pulse2 = 0.98 + Math.cos(time * 18) * 0.06;
+    particleSystem1.scale.set(pulse1, pulse1, pulse1);
+    particleSystem2.scale.set(pulse2, pulse2, pulse2);
+
+    // Swirling purple color profiles
+    setParticleColor(particleGeometry1, '#7a00cc', particleCount1);
+    setParticleColor(particleGeometry2, '#bd00ff', particleCount2);
 
   } else if (orbState === 'speaking') {
-    // Bouncing throb matching wave form
-    particleSystem.rotation.y = time * 0.28;
-    particleSystem.rotation.x = time * 0.12;
-    const throb = 1.05 + Math.sin(time * 6.5) * 0.09 * (1.0 + Math.cos(time * 3.5));
-    particleSystem.scale.set(throb, throb, throb);
-    setParticleColor('#0066ff'); // Royal blue
+    // Outward throb matching speech peak simulation
+    particleSystem1.rotation.y = time * 0.35;
+    particleSystem1.rotation.x = time * 0.15;
+    
+    particleSystem2.rotation.y = -time * 0.25;
+    particleSystem2.rotation.x = -time * 0.1;
+
+    const throb1 = 1.02 + Math.sin(time * 6.5) * 0.06 * (1.0 + Math.cos(time * 3.5));
+    const throb2 = 1.06 + Math.cos(time * 6.5) * 0.08 * (1.0 + Math.sin(time * 3.5));
+    particleSystem1.scale.set(throb1, throb1, throb1);
+    particleSystem2.scale.set(throb2, throb2, throb2);
+
+    // Dual blue voice frequency waves
+    setParticleColor(particleGeometry1, '#0011aa', particleCount1);
+    setParticleColor(particleGeometry2, '#0088ff', particleCount2);
   }
 
   renderer.render(scene, camera);
 }
 
-// Smooth linear color lerp for point arrays
-function setParticleColor(hexColor) {
-  const colors = particleGeometry.attributes.color.array;
+// Lerps point array colors towards targets smoothly
+function setParticleColor(geom, hexColor, count) {
+  const colors = geom.attributes.color.array;
   const target = new THREE.Color(hexColor);
   
-  for (let i = 0; i < particleCount; i++) {
+  for (let i = 0; i < count; i++) {
     colors[i * 3] += (target.r - colors[i * 3]) * 0.08;
     colors[i * 3 + 1] += (target.g - colors[i * 3 + 1]) * 0.08;
     colors[i * 3 + 2] += (target.b - colors[i * 3 + 2]) * 0.08;
   }
-  particleGeometry.attributes.color.needsUpdate = true;
+  geom.attributes.color.needsUpdate = true;
 }
 
 function updateOrbState(state) {
