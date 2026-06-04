@@ -393,6 +393,36 @@ function updateStatus(text, mode) {
 async function handleUserCommand(command) {
   if (!command.trim()) return;
 
+  const cleanCmd = command.trim().toLowerCase();
+  
+  // Strict shutdown gate: matches "jarvis, shut down." or "jarvis, shut down"
+  if (cleanCmd === 'jarvis, shut down.' || cleanCmd === 'jarvis, shut down') {
+    addChatMessage('You', command, 'user');
+    addChatMessage('System CLI', 'SYSTEM SHUTDOWN INITIATED. CEASING OPERATIONS.', 'system');
+    
+    // Stop continuous listening loop
+    state.continuousListening = false;
+    if (recognition) {
+      try { recognition.abort(); } catch (e) {}
+    }
+    
+    speak("Shutdown sequence initiated. Core deactivated. Goodbye.", () => {
+      // Send shutdown signal to backend Express process
+      fetch('/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'jarvis, shut down.' })
+      }).catch(() => {});
+      
+      updateStatus('SYSTEM OFFLINE', 'error');
+      updateOrbState('idle');
+      document.body.style.opacity = '0.3';
+      document.body.style.pointerEvents = 'none';
+      orbSubtext.innerText = "OFFLINE - RESTART LOCAL SERVER TO BOOT";
+    });
+    return;
+  }
+
   addChatMessage('You', command, 'user');
   commandInput.value = '';
 

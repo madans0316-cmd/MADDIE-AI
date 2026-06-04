@@ -158,6 +158,18 @@ app.post('/api/command', async (req, res) => {
   console.log(`[Maddy Backend] Received command: "${cleanCmd}"`);
 
   try {
+    // 0. EXPLICIT SHUTDOWN COMMAND
+    if (cleanCmd === 'jarvis, shut down.' || cleanCmd === 'jarvis, shut down') {
+      console.log('[Jarvis Backend] SHUTDOWN SIGNALLING RECEIVED. Ceasing operations...');
+      setTimeout(() => {
+        process.exit(0);
+      }, 1000);
+      return res.json({ 
+        success: true, 
+        message: 'Shutdown sequence initiated. Core deactivated. Goodbye.' 
+      });
+    }
+
     // 1. OPEN COMMANDS
     if (cleanCmd.startsWith('open ') || cleanCmd.startsWith('launch ')) {
       const rawTarget = cleanCmd.replace(/^(open|launch)\s+/, '').trim();

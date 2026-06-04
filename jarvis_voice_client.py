@@ -119,6 +119,11 @@ def main():
                 command_phrase = listen_for_command(recognizer, source, is_wake_word_mode=False)
                 
                 if command_phrase:
+                    # Strict shutdown gating logic
+                    if command_phrase in ["jarvis, shut down.", "jarvis, shut down", "jarvis shut down", "shut down"]:
+                        speak("Shutdown sequence initiated. Core deactivated. Goodbye.")
+                        sys.exit(0)
+
                     success = handle_system_command(command_phrase)
                     if not success:
                         # Pass to general search
